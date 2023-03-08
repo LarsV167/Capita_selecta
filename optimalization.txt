@@ -1,0 +1,43 @@
+fixed 102, moving 107 lijken totaal niet op elkaar voor de 5 beste slices
+
+
+1) p102 fixed, p107 moving
+grid spacing 16 ipv 4, resolutions 4, schedule default 2D
+//(GridSpacingSchedule 8.0 4.0 2.0 1.0) stond er eerst, nu de default voor 2D gebruikt die in elastix manual staat
+geeft geen realistische plaatjes, je ziet gekke deformaties. wel deze default gebruiken zodat we weten dat we de goede voor 2D gebruiken. 
+jacobian laat op elk plaatje in bepaalde gebieden een negatieve waarde zien, dus folding gebeurt wel.
+nu een weight van 25 gebruikt, maar wss is er een hogere waarde nodig.
+
+weight 100, gridspacing 16
+images look more realistic because the weird shapes are gone
+no more negative jacobians anymore
+first 2 images are black
+
+all the same, gridspacing 32 
+for the first 2 images now get a result so gridspacing probably helped
+
+step size 0.001 toegevoegd (zie collegeblok)
+step size 0.0001 no difference
+
+
+2) p115 fixed, p125 moving
+weight 100, resolutions 5, gridspacing 16, not default 2D schedule meegegeven
+really large minus jacobian values, such as -3000
+
+weight 200, resolutions 4, gridspacing 16, not default 2D schedule meegegeven
+still crazy results
+
+weight 100, gridspacing 32, resolutions 4
+much better results
+
+add grid spacing schedule
+no difference
+
+
+3) p129 fixed, p117 moving
+optimization not tried because the images look very different and transformation were weird
+therefore we did not change the parameters for this one
+
+
+4) p125 fixed, p115 moving
+weight 100, resolution 4, grid spacing 32 gaf redelijke resultaten

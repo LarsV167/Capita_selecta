@@ -2,9 +2,9 @@
 
 //ImageTypes
 (FixedInternalImagePixelType "float")
-(FixedImageDimension 3)
+(FixedImageDimension 2)
 (MovingInternalImagePixelType "float")
-(MovingImageDimension 3)
+(MovingImageDimension 2)
 
 //Components
 (Registration "MultiMetricMultiResolutionRegistration")
@@ -19,15 +19,15 @@
 (Transform "BSplineTransform")
 (Metric "AdvancedMattesMutualInformation" "TransformBendingEnergyPenalty")
 (Metric0Weight 1)
-(Metric1Weight 25) // OPTIMIZED BY QUANTITATIVE MEASURES
+(Metric1Weight 100) // OPTIMIZED BY QUANTITATIVE MEASURES
 
 
 (ErodeMask "false" )
 
-(NumberOfResolutions 5)
+(NumberOfResolutions 4)
 
-(FinalGridSpacingInPhysicalUnits 4.0)
-//(GridSpacingSchedule 8.0 4.0 2.0 1.0)
+(FinalGridSpacingInPhysicalUnits 32.0)
+(GridSpacingSchedule 8.0 8.0 4.0 4.0 2.0 2.0 1.0 1.0)
 
 (HowToCombineTransforms "Compose")
 
@@ -38,6 +38,7 @@
 
 //Maximum number of iterations in each resolution level:
 (MaximumNumberOfIterations 1000 ) 
+(MinimumStepLength 0.001)
 
 //Number of grey level bins in each resolution level:
 (NumberOfHistogramBins 32 )

@@ -119,7 +119,7 @@ def getPatientAndSlice(index_most_similar, used_moving_slices, list_moving, pati
     slice_grabber = index_most_similar%divider_patient # per patient, which slice index
     actual_slice_nr = used_moving_slices[slice_grabber] # link back to range of slices you are considering
     
-    print('Patient:', patient_nrs_list_train[patient_index_grabber], 'and slice nr:', actual_slice_nr)
+    #print('Patient:', patient_nrs_list_train[patient_index_grabber], 'and slice nr:', actual_slice_nr)
     
     return patient_index_grabber, actual_slice_nr
 
@@ -162,20 +162,20 @@ def visualize_patients(patient_fixed, patient_moving, slice_fixed, slice_moving)
     plt.title('Moving MR input image, \nslice {}, {}'.format(slice_moving, patient_moving))
 
         
-def create2DImages(fixed_image_path, moving_image_path, fixed_image_ID, moving_image_ID, filepath_data_stored):
+def create2DImages(fixed_image_path, fixed_image_ID, filepath_data_stored):
     """
     Create a 2D image of each slice in the 3D image.
     
     input: 
     fixed_image_path: the path to the fixed image slice. 
-    moving_image_path: the path to the moving image slices.
+    fixed_image_ID: ID of patient
     
     output:
     - 
     
     """
     itk_image_fixed = sitk.ReadImage(fixed_image_path)
-    itk_image_moving = sitk.ReadImage(moving_image_path)
+    #itk_image_moving = sitk.ReadImage(moving_image_path)
     
     # I kept the for-loop since one patient always contains 86 slices and it is so fast that I don't think it is necessary
     # to only create images for certain slices
@@ -186,11 +186,12 @@ def create2DImages(fixed_image_path, moving_image_path, fixed_image_ID, moving_i
         path_fixed = filepath_data_stored+ '\{}\{}_slice{}.mhd'.format(fixed_image_ID, fixed_image_ID, i)
         sitk.WriteImage(slice_i,path_fixed)
     
+        ## commented out the moving image, since we now do it for all patients at once
         # moving image
-        itk_img_array_moving = sitk.GetArrayFromImage(itk_image_moving)
-        slice_i = sitk.GetImageFromArray(itk_img_array_moving[i,:,:])
-        path_moving = filepath_data_stored+ '\{}\{}_slice{}.mhd'.format(moving_image_ID, moving_image_ID, i)
-        sitk.WriteImage(slice_i,path_moving)
+        #itk_img_array_moving = sitk.GetArrayFromImage(itk_image_moving)
+        #slice_i = sitk.GetImageFromArray(itk_img_array_moving[i,:,:])
+        #path_moving = filepath_data_stored+ '\{}\{}_slice{}.mhd'.format(moving_image_ID, moving_image_ID, i)
+        #sitk.WriteImage(slice_i,path_moving)
 
         
 def bspline_registration(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data_stored, el_path):
@@ -229,7 +230,7 @@ def bspline_registration(patient_fixed, patient_moving, slice_fixed, slice_movin
     output_dir=output_file_path_bspline)
     
     
-def visualize_bspline_results(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def visualize_bspline_results(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data):
     """
     Visualize results of bspline transformation
     
@@ -238,6 +239,7 @@ def visualize_bspline_results(patient_fixed, patient_moving, slice_fixed, slice_
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - filepath_data: filepath in which all training data is stored
     
     output:
     3 images displayed the fixed slice, moving slice and transformed moving slice
@@ -269,12 +271,13 @@ def visualize_bspline_results(patient_fixed, patient_moving, slice_fixed, slice_
     ax[2].imshow(transformed_moving_image[:,:], cmap='gray')
     
     
-def Jacobian(output_file_path_bspline):
+def Jacobian(output_file_path_bspline, tr_path):
     """
     Calculate the Jacobian.
     
     input:
     output_file_path_bspline: the path to the TransformParameters.0.txt file.
+    tr_path:path to transformix interface
     
     output:
     imb: the Jacobian value.
@@ -285,7 +288,7 @@ def Jacobian(output_file_path_bspline):
     
     # apply transformix
     tr = elastix.TransformixInterface(parameters=transform_path_im,
-                                  transformix_path=TRANSFORMIX_PATH)
+                                  transformix_path=tr_path)
     
     # define the path to the output folder
     output_dir_jacobian = output_file_path_bspline
@@ -301,7 +304,7 @@ def Jacobian(output_file_path_bspline):
     return imb
 
 
-def visualize_jacobian(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def visualize_jacobian(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data, tr_path):
     """
     Visualizes jacobian determinant of transformation
     
@@ -310,6 +313,8 @@ def visualize_jacobian(patient_fixed, patient_moving, slice_fixed, slice_moving)
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - filepath: path to folder in which all training data is stored
+    - tr_path: path to transformix interface
     
     output:
     - image of jacobian determinant in transformed image
@@ -318,27 +323,28 @@ def visualize_jacobian(patient_fixed, patient_moving, slice_fixed, slice_moving)
     output_file_path_bspline = os.path.join(os.path.join(filepath_data,'{}\\bspline_results_slice_{}\\moving_slice_{}_{}'.format(patient_fixed,slice_fixed,patient_moving,slice_moving)))
     
     # calculate the Jacobian per slice
-    imb_value = Jacobian(output_file_path_bspline)
+    imb_value = Jacobian(output_file_path_bspline, tr_path=tr_path)
     
     # visualize the Jacobian per slice
     plt.figure(figsize=(5,5))
     pos = plt.imshow(imb_value[:,:],cmap='gray')
     plt.colorbar(pos)
     
-def create2DMasks(fixed_mask_path, moving_mask_path):
+def create2DMasks(fixed_mask_path,fixed_image_ID, filepath_data):
     """
     Create a 2D mask of each slice in the 3D mask.
     
     input: 
     fixed_mask_path: the path to the fixed mask slice. 
-    moving_mask_path: the path to the moving mask slices.
+    fixed_image_ID: ID of patient
+    filepath_data: path to training data
     
     output:
     - 
     
     """
     itk_image_fixed = sitk.ReadImage(fixed_mask_path)
-    itk_image_moving = sitk.ReadImage(moving_mask_path)
+    #itk_image_moving = sitk.ReadImage(moving_mask_path)
     
     # I kept the for-loop since one patient always contains 86 slices and it is so fast that I don't think it is necessary
     # to only create masks for certain slices
@@ -346,17 +352,18 @@ def create2DMasks(fixed_mask_path, moving_mask_path):
         # fixed mask
         itk_img_array = sitk.GetArrayFromImage(itk_image_fixed)
         slice = sitk.GetImageFromArray(itk_img_array[i,:,:])
-        path_fixed = filepath_data+ '\{}\mask_{}_slice{}.mhd'.format(patient_fixed, patient_fixed, i)
+        path_fixed = filepath_data+ '\{}\mask_{}_slice{}.mhd'.format(fixed_image_ID, fixed_image_ID, i)
         sitk.WriteImage(slice,path_fixed)
     
+        ## commented this out since we now do it for all patients at once
         # moving image
-        itk_img_array_moving = sitk.GetArrayFromImage(itk_image_moving)
-        slice = sitk.GetImageFromArray(itk_img_array_moving[i,:,:])
-        path_moving = filepath_data+ '\{}\mask_{}_slice{}.mhd'.format(patient_moving, patient_moving, i)
-        sitk.WriteImage(slice,path_moving)
+        #itk_img_array_moving = sitk.GetArrayFromImage(itk_image_moving)
+        #slice = sitk.GetImageFromArray(itk_img_array_moving[i,:,:])
+        #path_moving = filepath_data+ '\{}\mask_{}_slice{}.mhd'.format(fixed_image_ID, moving_image_ID, i)
+        #sitk.WriteImage(slice,path_moving)
 
         
-def newTransformParameterFile(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def newTransformParameterFile(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data):
     """
     Create a copy of the 'TransformParameters.0.txt' and rename it to 'TransformParameters.0b.txt'.
     In the new file, the (FinalBSplineInterpolationOrder 3) is changed to value 0.
@@ -366,6 +373,7 @@ def newTransformParameterFile(patient_fixed, patient_moving, slice_fixed, slice_
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - filepath_data: path to training data
     
     output:
     - 
@@ -388,7 +396,7 @@ def newTransformParameterFile(patient_fixed, patient_moving, slice_fixed, slice_
         
         file.write(data)
         
-def bspline_mask_registration(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def bspline_mask_registration(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data, tr_path):
     """
     Performs bspline transformation on masks, using the parameter file from the earlier registration
     
@@ -397,6 +405,8 @@ def bspline_mask_registration(patient_fixed, patient_moving, slice_fixed, slice_
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - tr_path: path to transformix interface
+    - filepath_data: path to folder in which training data is stored
     
     output:
     -
@@ -419,13 +429,13 @@ def bspline_mask_registration(patient_fixed, patient_moving, slice_fixed, slice_
     
     # apply transformix
     tr = elastix.TransformixInterface(parameters=target_path,
-                                  transformix_path=TRANSFORMIX_PATH)
+                                  transformix_path=tr_path)
     
     # transform the moving mask with the transformation parameters
     tr.transform_image(path_moving_mask, output_dir=output_file_path_bspline_mask)
     
     
-def visualize_bspline_mask_results(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def visualize_bspline_mask_results(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data):
     """
     Visualizes results from bspline registration on the masks:
     
@@ -434,6 +444,7 @@ def visualize_bspline_mask_results(patient_fixed, patient_moving, slice_fixed, s
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - filepath_data: path to training data
     
     output:
     - Fixed image mask, moving image mask and transformed moving image mask
@@ -449,6 +460,7 @@ def visualize_bspline_mask_results(patient_fixed, patient_moving, slice_fixed, s
     
     output_file_path_bspline_mask = os.path.join(os.path.join(filepath_data,'{}\\mask_bspline_results_slice_{}\\moving_slice_{}_{}'.format(patient_fixed,slice_fixed,patient_moving,slice_moving)))
     
+
     # visualize the images  
     itk_image_fixed = sitk.ReadImage(path_fixed_mask)
     image_array_fixed = sitk.GetArrayFromImage(itk_image_fixed)
@@ -464,7 +476,7 @@ def visualize_bspline_mask_results(patient_fixed, patient_moving, slice_fixed, s
     ax[1].imshow(image_array_moving[:,:], cmap='gray')
     ax[2].imshow(transformed_moving_image[:,:], cmap='gray')
     
-def overlay_mask(patient_fixed, patient_moving, slice_fixed, slice_moving):
+def overlay_mask(patient_fixed, patient_moving, slice_fixed, slice_moving, filepath_data):
     """
     Visualizes registration by overlaying the mask over the MR images
     
@@ -473,6 +485,7 @@ def overlay_mask(patient_fixed, patient_moving, slice_fixed, slice_moving):
     - patient_moving: patient number of fixed patient (e.g. p108)
     - slice_fixed: slice number of fixed slice
     - slice_moving: slice number of moving slice
+    - filepath_data: path to training data
     
     output:
     - Fixed, moving and transformed moving slice with masks overlayed
@@ -511,15 +524,15 @@ def overlay_mask(patient_fixed, patient_moving, slice_fixed, slice_moving):
     
     ax[0].imshow(readable_fixed_image_path_IM[:,:], cmap='gray')
     ax[0].imshow(image_array_fixed[:,:], cmap='gray', alpha=0.5)
-    ax[0].set_title('Fixed image, \nslice {}, {}'.format(i, patient_fixed))
+    ax[0].set_title('Fixed image, \nslice {}, {}'.format(slice_fixed, patient_fixed))
     
     ax[1].imshow(readable_moving_image_path_IM[:,:], cmap='gray')
     ax[1].imshow(image_array_moving[:,:], cmap='gray', alpha=0.5)
-    ax[1].set_title('Moving image, \nslice {}, {}'.format(i, patient_moving))
+    ax[1].set_title('Moving image, \nslice {}, {}'.format(slice_moving, patient_moving))
     
     ax[2].imshow(transformed_moving_image_IM[:,:], cmap='gray')
     ax[2].imshow(transformed_moving_image_MASK[:,:], cmap='gray', alpha=0.5)
-    ax[2].set_title('Transformed\nmoving image, \nslice {}, {}'.format(i, patient_moving))
+    ax[2].set_title('Transformed\nmoving image, \nslice {}, {}'.format(slice_moving, patient_moving))
     
     plt.show()
     

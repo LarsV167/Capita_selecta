@@ -544,10 +544,10 @@ def diceFunction(im1, im2):
     :return: Dice score
     '''
     
-    readable_im1 = imageio.imread(im1)
+    #readable_im1 = imageio.imread(im1)
     readable_im2 = imageio.imread(im2)
     
-    im1 = np.asarray(readable_im1).astype(bool)
+    im1 = np.asarray(im1).astype(bool)
     im2 = np.asarray(readable_im2).astype(bool)
 
     if im1.shape != im2.shape:
@@ -581,11 +581,11 @@ def computeQualityMeasures(im_pred, im_truth):
     (-standard deviation surface distance)
     (-maximum surface distance)
     """
-    readable_pred = imageio.imread(im_pred)
+    #readable_pred = imageio.imread(im_pred)
     readable_truth = imageio.imread(im_truth)
     
     quality=dict()
-    labelPred=sitk.GetImageFromArray(readable_pred, isVector=False)
+    labelPred=sitk.GetImageFromArray(im_pred, isVector=False)
     labelTrue=sitk.GetImageFromArray(readable_truth, isVector=False)
     
     #Hausdorff Distance
@@ -642,5 +642,51 @@ def computeQualityMeasures(im_pred, im_truth):
 
     return quality
 
+def Atlas( seg_data,slices=[]):
+    """
+    Combine multiple segmentations into one
+    
+    input:
+        - seg_data: list containing readable segmentations
+        
+    output:
+        - STAPLE_seg: combined segmentation
+    """
+#    segs=['seg_0','seg_1','seg_2','seg_3','seg_4']
+#    seg_data=[]
+#    for i in range(len(patient_list)):
+#        file_p_mask = data_paths+'\{}\prostaat.mhd'.format(patient_list[i]) #Directory will have to be changed still 
+#        print(file_p_mask)
+#        readable_mask=imageio.imread(file_p_mask)
+#        readable_mask=readable_mask[slices[i],:,:]
+#        segs[i]= readable_mask
+#        seg_data.append(segs[i])
+#  
+    
+    segs_itk=['seg0_itk','seg1_itk','seg2_itk','seg3_itk','seg4_itk']
 
+    seg_stack=[]
+    for i in range(len(seg_data)):
+         segs_itk[i]= sitk.GetImageFromArray(seg_data[i].astype(np.int16))
+         seg_stack.append(segs_itk[i])
+    
+    
+
+
+# Run STAPLE algorithm
+    STAPLE_seg_sitk = sitk.STAPLE(seg_stack,1, 1.0)# 1.0 specifies the foreground value
+
+
+# convert back to numpy array
+    STAPLE_seg = sitk.GetArrayFromImage(STAPLE_seg_sitk)
+
+# I made these loops below so that you get a binary mask and not the probabilities of the combinations.
+# So all values ​​below 0.5 have a high probability of being zero and anything above that of being 1. Possible discussion point
+    for i in range(STAPLE_seg.shape[0]):
+        for j in range(STAPLE_seg.shape[1]):
+            if STAPLE_seg[i,j]<=0.5:
+                STAPLE_seg[i,j]=0
+            else:
+                STAPLE_seg[i,j]=1
+    return STAPLE_seg
     

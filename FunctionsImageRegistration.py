@@ -544,10 +544,10 @@ def diceFunction(im1, im2):
     :return: Dice score
     '''
     
-    #readable_im1 = imageio.imread(im1)
+    readable_im1 = imageio.imread(im1)
     readable_im2 = imageio.imread(im2)
     
-    im1 = np.asarray(im1).astype(bool)
+    im1 = np.asarray(readable_im1).astype(bool)
     im2 = np.asarray(readable_im2).astype(bool)
 
     if im1.shape != im2.shape:
@@ -581,11 +581,11 @@ def computeQualityMeasures(im_pred, im_truth):
     (-standard deviation surface distance)
     (-maximum surface distance)
     """
-    #readable_pred = imageio.imread(im_pred)
+    readable_pred = imageio.imread(im_pred)
     readable_truth = imageio.imread(im_truth)
     
     quality=dict()
-    labelPred=sitk.GetImageFromArray(im_pred, isVector=False)
+    labelPred=sitk.GetImageFromArray(readable_pred, isVector=False)
     labelTrue=sitk.GetImageFromArray(readable_truth, isVector=False)
     
     #Hausdorff Distance

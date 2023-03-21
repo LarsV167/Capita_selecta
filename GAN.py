@@ -91,7 +91,7 @@ class Generator(nn.Module):
         for i in range(len(self.chs) - 1):
             x = self.upconvs[i](x)
             x = self.dec_blocks[i](x)
-        x = x.view(b, -1)
+        #x = x.view(b, -1)
         x = self.proj_o(x)  # output layer
         return x
 
@@ -125,7 +125,7 @@ class Discriminator(nn.Module):
             self.conv,
             nn.Sigmoid(),
         )  # output layer
-        
+
         # self.out=nn.Sequential(nn.Flatten(1),nn.Linear(2*256*16*16,1),
         #     nn.Sigmoid(),
         # )  

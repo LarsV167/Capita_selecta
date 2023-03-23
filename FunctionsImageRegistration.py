@@ -110,7 +110,7 @@ def intoOneList(list_of_lists):
     return big_list
 
 
-def getPatientAndSlice(index_most_similar, used_moving_slices, list_moving, patient_nrs_list_train):
+def getPatientAndSlice(index_most_similar, used_moving_slices, list_moving, patient_nrs_list_train, list_ids_moving):
     """
     Function to retrieve which patient and which slice index corresponds to the most similar slices.
     """
@@ -119,7 +119,7 @@ def getPatientAndSlice(index_most_similar, used_moving_slices, list_moving, pati
     slice_grabber = index_most_similar%divider_patient # per patient, which slice index
     actual_slice_nr = used_moving_slices[slice_grabber] # link back to range of slices you are considering
     
-    #print('Patient:', patient_nrs_list_train[patient_index_grabber], 'and slice nr:', actual_slice_nr)
+    #print('Patient:', list_ids_moving[patient_index_grabber], 'and slice nr:', actual_slice_nr)
     
     return patient_index_grabber, actual_slice_nr
 

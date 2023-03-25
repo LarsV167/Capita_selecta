@@ -57,11 +57,12 @@ class Generator(nn.Module):
         self.h = h  # height of image at lowest resolution level
         self.w = w  # width of image at lowest resolution level
         self.z_dim = z_dim  # dimension of latent space
+        #self.label_emb = nn.Embedding(2, 256) #What should be the values here?
         self.proj_z = nn.Linear(
-            self.z_dim, self.chs[0] * self.h * self.w
+            255, 255 * self.h * self.w
         )  # fully connected layer on latent space
         self.reshape = lambda x: torch.reshape(
-            x, (-1, self.chs[0], self.h, self.w)
+            x, (-1, 255, self.h, self.w)
         )  # reshaping
 
         self.upconvs = nn.ModuleList(
@@ -81,13 +82,15 @@ class Generator(nn.Module):
         Returns the output of the decoder part of the VAE
         :param x: input tensor to the generator
         """
-       
+         
         b, c, h, w = seg.size()
         x = self.proj_z(z)  # fully connected layer
         x = self.reshape(x)  # reshape to image dimension
         seg=interpolate(seg, size=(seg.size(2)//8, seg.size(3)//8), mode='bilinear')
+        #emb=self.label_emb(seg.detach().type(torch.long))
 
-        x=torch.add(x,seg) #add label to input (should it be concatenate? How to concatenate them? Not sure about shapes)
+        x=torch.cat((x,seg),1) #add label to input (should it be concatenate? How to concatenate them? Not sure about shapes)
+        
         for i in range(len(self.chs) - 1):
             x = self.upconvs[i](x)
             x = self.dec_blocks[i](x)
@@ -115,7 +118,7 @@ def custom_model2(in_chan, out_chan, stride=2):
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
-        self.label_emb = nn.Embedding(10, 10) #What should be the values here?
+        #self.label_emb = nn.Embedding(2, 256) #What should be the values here?
         self.layer1 = custom_model1(32, 64)
         self.layer2 = custom_model2(64, 128)
         self.layer3 = custom_model2(128, 256,stride=1)
@@ -138,8 +141,8 @@ class Discriminator(nn.Module):
     def forward(self, img, seg): #input real or fake image and label 
        # x = torch.cat((img.view(img.size(0), -1),
                           #seg.view(seg.size(0), -1)), dim=1)
-        c = self.label_emb(torch.LongTensor(seg.detach()))    
-        x = torch.cat((c.detach(), img.detach()), dim=1)
+
+        x = torch.cat((seg.detach(), img.detach()), dim=1)
         x = x.view(-1, 32, 64, 64)
         x = self.layer1(x)
         x = self.layer2(x)

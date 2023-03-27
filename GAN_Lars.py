@@ -53,6 +53,8 @@ class Generator(nn.Module):
         :param chs: tuple giving the number of input channels of each block in the decoder
         """
         super().__init__()
+        # self.label_conditioned_generator =nn.Sequential(nn.Embedding(32, 256),
+        #           nn.Linear(256, 1))
         self.chs = chs
         self.h = h  # height of image at lowest resolution level
         self.w = w  # width of image at lowest resolution level
@@ -64,6 +66,7 @@ class Generator(nn.Module):
         self.reshape = lambda x: torch.reshape(
             x, (-1, 255, self.h, self.w)
         )  # reshaping
+
 
         self.upconvs = nn.ModuleList(
             [nn.ConvTranspose2d(chs[i], chs[i], 2, 2) for i in range(len(chs) - 1)]
@@ -88,8 +91,12 @@ class Generator(nn.Module):
         x = self.reshape(x)  # reshape to image dimension
         seg=interpolate(seg, size=(seg.size(2)//8, seg.size(3)//8), mode='bilinear')
         #emb=self.label_emb(seg.detach().type(torch.long))
-
-        x=torch.cat((x,seg),1) #add label to input (should it be concatenate? How to concatenate them? Not sure about shapes)
+        # print(x.size())
+        # label_output = self.label_conditioned_generator(seg.type(torch.long))
+        # print(label_output.size())
+        # label_output = label_output.view(-1, 1, 8, 8)
+        # print(label_output.size())
+        x=torch.cat((x,seg),1) #add label to input 
         
         for i in range(len(self.chs) - 1):
             x = self.upconvs[i](x)
@@ -98,15 +105,55 @@ class Generator(nn.Module):
         x = self.proj_o(x)  # output layer
         return x
 
+# class Generator(nn.Module):
+#     def __init__(self):
+#         super(Generator, self).__init__()
+         
+      
+#         self.label_conditioned_generator =nn.Sequential(nn.Embedding(32, 256),
+#                       nn.Linear(256, 256*8*8))
+         
+     
+#         self.latent =nn.Sequential(nn.Linear(256, 8*8*256),
+#                                    nn.LeakyReLU(0.2, inplace=True))
+            
+ 
+#         self.model =nn.Sequential(nn.ConvTranspose2d(257, 64*4, 2, 2, 1, bias=False),
+#                       nn.BatchNorm2d(64*4, momentum=0.1,  eps=0.8),
+#                       nn.ReLU(True),
+#                       nn.ConvTranspose2d(64*4, 64*2, 2, 2, 1,bias=False),
+#                       nn.BatchNorm2d(64*2, momentum=0.1,  eps=0.8),
+#                       nn.ReLU(True), 
+#                       nn.ConvTranspose2d(64*2, 64*1, 2, 2, 1,bias=False),
+#                       nn.BatchNorm2d(64, momentum=0.1,  eps=0.8),
+#                       nn.ReLU(True),  
+#                       nn.ConvTranspose2d(64*1, 64//2, 2, 2, 1, bias=False),
+#                       nn.BatchNorm2d(64//2, momentum=0.1,  eps=0.8),
+#                       nn.ReLU(True),   
+#                       nn.Conv2d(64//2, 1, kernel_size=3, padding=1),
+#                       nn.Tanh())
+ 
+#     def forward(self, inputs):
+#         noise_vector, label = inputs
+#         label_output = self.label_conditioned_generator(label.type(torch.long))
+#         label_output = label_output.view(-1, 1, 8, 8)
+#         latent_output = self.latent(noise_vector)
+#         latent_output = latent_output.view(-1, 256,8,8)
+#         print(latent_output.size())
+#         print(label_output.size())
+#         concat = torch.cat((latent_output, label_output), dim=1)
+#         image = self.model(concat)
+#         #print(image.size())
+#         return image
 
         
 def custom_model1(in_chan, out_chan):
     return nn.Sequential(
-        spectral_norm(nn.Conv2d(in_chan, out_chan, kernel_size=(3,3), stride=2, padding=1)),
+        spectral_norm(nn.Conv2d(in_chan, out_chan, kernel_size=(3,3), stride=1, padding=1)),
         nn.LeakyReLU(inplace=True)
     )
 
-def custom_model2(in_chan, out_chan, stride=2):
+def custom_model2(in_chan, out_chan, stride=1):
     return nn.Sequential(
         spectral_norm(nn.Conv2d(in_chan, out_chan, kernel_size=(3,3), stride=stride, padding=1)),
         nn.BatchNorm2d(out_chan),
@@ -124,16 +171,15 @@ class Discriminator(nn.Module):
         self.layer3 = custom_model2(128, 256,stride=1)
         #self.layer4 = custom_model2(256, 512, stride=1)
         self.inst_norm = nn.InstanceNorm2d(256)
-        self.conv = spectral_norm(nn.Conv2d(256, 1, kernel_size=(3,3), padding=1)) #Should be dense layer? 
-        self.out=nn.Sequential(
-            self.conv,
-            nn.Flatten(-1),
-            nn.Sigmoid(),
-        )  # output layer
-
-        # self.out=nn.Sequential(nn.Flatten(1),nn.Linear(2*256*16*16,1),
+        self.conv = spectral_norm(nn.Conv2d(256, 32, kernel_size=(3,3), padding=1)) #Should be dense layer? 
+        # self.out=nn.Sequential(
+        #     self.conv,
         #     nn.Sigmoid(),
-        # )  
+        # )  # output layer
+
+        self.out=nn.Sequential(nn.Flatten(1),nn.Linear(256*16*16,1),
+            nn.Sigmoid(),
+        )  
         # output layer with dense layer ( I think this should be there instead of conv2d, however when training the
         # loss does not converge )
 
@@ -149,8 +195,11 @@ class Discriminator(nn.Module):
         x = self.layer3(x)
         #x = self.layer4(x)
         x = leaky_relu(self.inst_norm(x))
-        #x=x.view(-1,2*256*16*16) #In case of dense layer change shape of x to fit in Linear function to output 1 channel
+        x=x.view(-1,256*16*16) #In case of dense layer change shape of x to fit in Linear function to output 1 channel
+    
+        
         x = self.out(x)
+        # x=x.view(32,2,64,64)
         return x
 
 

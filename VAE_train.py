@@ -28,9 +28,10 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
 from torchsummary import summary
 import matplotlib.pyplot as plt
+import numpy as np
 
 
-path_data=r"C:\Users\pauli\Desktop\UNI\UTRECHT\3RD PERIOD COURSES\CAPITA_SELECTA\group project\TrainingData\TrainingData"
+path_data=r"C:\Users\20191679\Documents\Master\CS_image_analysis\TrainingData"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -99,14 +100,30 @@ train_features, train_labels = next(iter(dataloader))
 print(f"Feature batch shape: {train_features.size()}")
 print(f"Labels batch shape: {train_labels.size()}")
 
+
+
 img = train_features[0].squeeze()
 label = train_labels[0].squeeze()
 plt.imshow(img, cmap="gray")
 plt.imshow(label,cmap='gray',alpha=0.3)
 plt.show()
 print(f"Label: {label}")
+print(label.size(dim=1))
 
 
+# create new segmentations with background values
+label_bg=np.zeros(np.shape(label))
+for i in range(64):
+    for j in range(64):
+        if label[i,j] == 0:
+            label_bg[i,j] = img[i,j]
+            
+        else:
+            label_bg[i,j] = torch.max(img[:,:])
+
+
+plt.imshow(label_bg[:,:], cmap='gray')
+plt.show()
 
 # load validation data
 valid_dataset = utils.ProstateMRDataset(partition["validation"], IMAGE_SIZE)

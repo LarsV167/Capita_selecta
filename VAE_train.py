@@ -111,19 +111,19 @@ print(f"Label: {label}")
 print(label.size(dim=1))
 
 
-# create new segmentations with background values
-label_bg=np.zeros(np.shape(label))
-for i in range(64):
-    for j in range(64):
-        if label[i,j] == 0:
-            label_bg[i,j] = img[i,j]
+# # create new segmentations with background values
+# label_bg=np.zeros(np.shape(label))
+# for i in range(64):
+#     for j in range(64):
+#         if label[i,j] == 0:
+#             label_bg[i,j] = img[i,j]
             
-        else:
-            label_bg[i,j] = torch.max(img[:,:])
+#         else:
+#             label_bg[i,j] = torch.max(img[:,:])
 
 
-plt.imshow(label_bg[:,:], cmap='gray')
-plt.show()
+# plt.imshow(label_bg[:,:], cmap='gray')
+# plt.show()
 
 # load validation data
 valid_dataset = utils.ProstateMRDataset(partition["validation"], IMAGE_SIZE)
